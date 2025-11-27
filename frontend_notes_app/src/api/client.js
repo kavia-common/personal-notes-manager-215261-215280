@@ -1,11 +1,16 @@
-const BASE_URL = process.env.REACT_APP_API_BASE || 'http://localhost:3001';
-const HEALTH_PATH = process.env.REACT_APP_HEALTHCHECK_PATH || '/health';
+ /**
+  * API client targeting backend.
+  * - Uses REACT_APP_API_BASE as the base URL (no trailing slash).
+  * - Health check path defaults to /api/health to match backend OpenAPI.
+  * - All note routes are under /api/notes.
+  */
+const BASE_URL = (process.env.REACT_APP_API_BASE || 'http://localhost:3001').replace(/\/*$/, '');
+const HEALTH_PATH = process.env.REACT_APP_HEALTHCHECK_PATH || '/api/health';
 
 function buildUrl(path) {
-  // Ensure no double slashes and prefix /api for notes
-  const base = BASE_URL.replace(/\/+$/, '');
+  // Normalize leading/trailing slashes on both base and path
   const normalized = path.startsWith('/') ? path : `/${path}`;
-  return `${base}${normalized}`;
+  return `${BASE_URL}${normalized}`;
 }
 
 async function handleResponse(res) {

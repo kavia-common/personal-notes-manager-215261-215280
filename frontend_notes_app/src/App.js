@@ -15,19 +15,30 @@ function App() {
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
+  const [backendHealthy, setBackendHealthy] = useState(true);
+  const [checkingHealth, setCheckingHealth] = useState(true);
 
   // Apply theme to document
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Initial load
+  // Initial load (health + notes)
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        // Optional health check (non-fatal)
-        try { await health(); } catch { /* ignore */ }
+        // Health check (non-fatal but surfaced)
+        try {
+          setCheckingHealth(true);
+          await health();
+          if (alive) setBackendHealthy(true);
+        } catch (e) {
+          console.warn('Health check failed:', e);
+          if (alive) setBackendHealthy(false);
+        } finally {
+          if (alive) setCheckingHealth(false);
+        }
 
         const data = await getNotes({});
         if (!alive) return;
@@ -139,6 +150,32 @@ function App() {
     <div className="App">
       <TopNav onNewNote={onNewNote} theme={theme} onToggleTheme={onToggleTheme} />
       <main className="main">
+        {!backendHealthy && (
+          <div className="state" role="status" aria-live="polite" style={{ marginBottom: 12, borderColor: 'var(--error)', color: 'var(--text-primary)' }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Backend unreachable</div>
+            <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>
+              The notes service appears to be offline or blocked by CORS. Ensure the backend is running and REACT_APP_API_BASE is set correctly.
+            </div>
+            <button
+              className="btn btn-secondary btn-small"
+              disabled={checkingHealth}
+              onClick={async () => {
+                try {
+                  setCheckingHealth(true);
+                  await health();
+                  setBackendHealthy(true);
+                } catch (e) {
+                  console.warn('Retry health failed:', e);
+                  window.alert('Backend still unavailable.');
+                } finally {
+                  setCheckingHealth(false);
+                }
+              }}
+            >
+              {checkingHealth ? 'Checking…' : 'Retry health'}
+            </button>
+          </div>
+        )}
         {content}
       </main>
 
